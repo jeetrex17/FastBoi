@@ -3,6 +3,7 @@
 #include <iostream>
 #include <curl/curl.h>
 #include <atomic>
+#include <chrono>
 
 static std::atomic<unsigned long long> TOTAL_BYTES{0}; // 64 bits
 
@@ -29,12 +30,24 @@ int main(){
 
     curl_easy_setopt(h, CURLOPT_WRITEFUNCTION , &write_sink);
 
+    //stopclocl
+    auto ts = std::chrono::steady_clock::now();
+
     CURLcode rc = curl_easy_perform(h);
+
+    //stopping stopclocl
+    auto tsp = std::chrono::steady_clock::now();
+    double seconds = std::chrono::duration<double>(tsp-ts).count();
+
+    unsigned long long bytes = TOTAL_BYTES.load();
+    double mbps = (bytes*8)/seconds/1e6;
 
     if(rc != CURLE_OK){
         std::cerr << "curl error " << curl_easy_strerror(rc) << "\n" ;
     }else{
         std::cout << "Total downloaded : " << TOTAL_BYTES.load() << " Bytes\n";
+        std::cout << "Time(s) : " << seconds << " seconds\n";
+        std::cout << "Mbps : " << mbps << " Mbps\n";
     }
 
     curl_easy_cleanup(h);
